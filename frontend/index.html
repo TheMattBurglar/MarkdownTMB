@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Markdown TMB</title>
+    <link rel="stylesheet" href="libs/toastui-editor.min.css">
+    <link rel="stylesheet" href="style.css?v=debug">
+</head>
+
+<body>
+    <div id="toolbar">
+        <div class="dropdown">
+            <button id="btn-menu" class="dropbtn">☰</button>
+            <div id="dropdown-content" class="dropdown-content">
+                <a href="#" id="menu-open">Open</a>
+                <a href="#" id="menu-save">Save</a>
+                <a href="#" id="menu-zoom-in">Zoom In (+)</a>
+                <a href="#" id="menu-zoom-out">Zoom Out (-)</a>
+            </div>
+        </div>
+        <!-- Cheatsheet Menu -->
+        <div class="dropdown">
+            <button id="btn-cheatsheet" class="dropbtn">?</button>
+            <div id="dropdown-cheatsheet" class="dropdown-content cheatsheet-content">
+                <div class="cs-item"><span>Header 1</span> <code># Text</code></div>
+                <div class="cs-item"><span>Header 2</span> <code>## Text</code></div>
+                <div class="cs-item"><span>Bold</span> <code>**Text**</code></div>
+                <div class="cs-item"><span>Italic</span> <code>*Text*</code></div>
+                <div class="cs-item"><span>Quote</span> <code>> Text</code></div>
+                <div class="cs-item"><span>Code</span> <code>`Text`</code></div>
+                <div class="cs-item"><span>Block</span> <code>```</code></div>
+                <div class="cs-item"><span>Rule</span> <code>---</code></div>
+            </div>
+        </div>
+
+        <div class="mode-toggle-container">
+            <label class="tmb-switch">
+                <input type="checkbox" id="mode-toggle">
+                <span class="tmb-slider"></span>
+            </label>
+            <span id="mode-label" class="mode-label">Edit</span>
+        </div>
+        <div class="mode-toggle-container">
+            <label class="tmb-switch">
+                <input type="checkbox" id="dark-mode-toggle" checked>
+                <span class="tmb-slider"></span>
+            </label>
+            <span id="dark-mode-label" class="mode-label">Dark Mode</span>
+        </div>
+        <span id="filename">untitled.md</span>
+        <span id="spell-status" style="margin-left: auto; font-size: 12px; color: #666;">Loading dictionary...</span>
+    </div>
+    <div id="editor"></div>
+    <script src="libs/toastui-editor-all.min.js"></script>
+    <script src="libs/typo.js"></script>
+    <script src="script.js"></script>
+</body>
+
+</html>

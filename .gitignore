@@ -1,0 +1,6 @@
+build/bin
+node_modules
+frontend/dist
+markdown-tmb
+temp_webview/
+test_cgo

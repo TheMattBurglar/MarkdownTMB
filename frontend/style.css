@@ -1,0 +1,517 @@
+html,
+body {
+    margin: 0;
+    padding: 0;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    font-family: sans-serif;
+    overflow: hidden;
+    background-color: var(--bg-color);
+    color: var(--text-color);
+}
+
+#toolbar {
+    padding: 10px;
+    background: var(--toolbar-bg);
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+#editor {
+    flex: 1;
+    overflow: hidden;
+    /* Fix for inconsistent text rendering/half-bold issues on WebKitGTK */
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    /* Force hardware acceleration to prevent jitter/popping */
+    transform: translateZ(0);
+    --editor-font-size: 16px;
+    background-color: var(--editor-bg);
+}
+
+/* Ensure ProseMirror content also inherits these properties explicitly if needed */
+.ProseMirror,
+.toastui-editor-contents,
+.tui-editor-defaultUI {
+    -webkit-font-smoothing: antialiased !important;
+    text-rendering: optimizeLegibility !important;
+    font-size: var(--editor-font-size) !important;
+    background-color: var(--editor-bg) !important;
+    color: var(--editor-text) !important;
+}
+
+button {
+    padding: 5px 10px;
+    cursor: pointer;
+    background-color: var(--toolbar-bg);
+    color: var(--text-color);
+    border: 1px solid var(--border-color);
+}
+
+button:hover {
+    background-color: var(--menu-hover);
+}
+
+/* Context Menu */
+.context-menu {
+    position: fixed;
+    background: var(--menu-bg);
+    border: 1px solid var(--border-color);
+    box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.2);
+    padding: 5px 0;
+    z-index: 1000;
+    min-width: 150px;
+    border-radius: 4px;
+    font-family: sans-serif;
+    font-size: 14px;
+    color: var(--text-color);
+}
+
+.spell-error {
+    /* text-decoration: underline wavy red; */
+    border-bottom: 2px dotted red;
+    background-color: rgba(255, 0, 0, 0.1);
+    /* Light red background for visibility */
+}
+
+.context-menu-item {
+    padding: 5px 15px;
+    cursor: pointer;
+    color: var(--text-color);
+}
+
+.context-menu-item:hover {
+    background-color: var(--menu-hover);
+}
+
+.context-menu-separator {
+    height: 1px;
+    background-color: var(--border-color);
+    margin: 5px 0;
+}
+
+.context-menu-header {
+    padding: 5px 15px;
+    color: #999;
+    font-size: 12px;
+    font-weight: bold;
+    cursor: default;
+}
+
+:root {
+    --bg-color: #ffffff;
+    --text-color: #000000;
+    --toolbar-bg: #f0f0f0;
+    --border-color: #ccc;
+    --editor-bg: #ffffff;
+    --editor-text: #333;
+    --menu-bg: #ffffff;
+    --menu-hover: #f0f0f0;
+}
+
+body.dark-mode {
+    --bg-color: #1e1e1e;
+    --text-color: #e0e0e0;
+    --toolbar-bg: #2d2d2d;
+    --border-color: #444;
+    --editor-bg: #1e1e1e;
+    --editor-text: #e0e0e0;
+    --menu-bg: #2d2d2d;
+    --menu-hover: #444;
+}
+
+/* Dark Mode text visibility for Preview Pane */
+body.dark-mode .toastui-editor-contents *,
+body.dark-mode .tui-editor-contents * {
+    color: var(--text-color) !important;
+    border-color: var(--border-color) !important;
+}
+
+/* Ensure code blocks look okay in Dark Mode (simple override) */
+body.dark-mode .toastui-editor-contents pre,
+body.dark-mode .toastui-editor-contents code,
+body.dark-mode .ProseMirror pre,
+body.dark-mode .ProseMirror code,
+body.dark-mode .cm-s-default .cm-comment,
+body.dark-mode .cm-s-default .cm-string,
+body.dark-mode .cm-s-default .cm-variable-2,
+body.dark-mode .cm-s-default .cm-variable-3,
+body.dark-mode .cm-s-default .cm-keyword {
+    background-color: #333 !important;
+    color: #ffd700 !important;
+    /* Gold text for better contrast */
+    text-shadow: none !important;
+}
+
+/* Specific fix for the CodeMirror background in Source Mode */
+body.dark-mode .CodeMirror,
+body.dark-mode .CodeMirror-gutter {
+    background-color: var(--editor-bg) !important;
+    color: var(--editor-text) !important;
+}
+
+/* Inline Code specific */
+body.dark-mode code,
+body.dark-mode .ProseMirror code,
+body.dark-mode .toastui-editor-md-code {
+    background-color: #444 !important;
+    color: #ff9e9e !important;
+    /* Light red/pink to stand out */
+    padding: 2px 4px;
+    border-radius: 3px;
+}
+
+/* Block Code specific - ToastUI structure */
+body.dark-mode .toastui-editor-md-code-block-line-background {
+    background-color: #2d2d2d !important;
+}
+
+body.dark-mode .cm-s-default .cm-variable-2,
+body.dark-mode .cm-s-default .cm-variable-3,
+body.dark-mode .cm-s-default .cm-keyword,
+body.dark-mode .cm-s-default .cm-string {
+    color: #a5d6ff !important;
+    /* Light blue for syntax highlighting */
+    background: transparent !important;
+}
+
+/* Fix for the white background in code blocks */
+body.dark-mode .cm-s-default span.cm-comment {
+    color: #6a9955 !important;
+}
+
+/* Source Only Mode - Legacy CSS Removed (Using API now) */
+/* API handles layout, so no manual hiding needed */
+.mode-source-only .te-preview {
+    display: none !important;
+}
+
+/* Hide default ToastUI bottom tabs */
+.te-mode-switch-section,
+.toastui-editor-mode-switch {
+    display: none !important;
+}
+
+/* Toggle Switch Styles */
+.tmb-switch {
+    position: relative;
+    display: inline-block;
+    width: 40px;
+    height: 20px;
+    margin-right: 5px;
+}
+
+.tmb-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.tmb-slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+    border-radius: 20px;
+}
+
+.tmb-slider:before {
+    position: absolute;
+    content: "";
+    height: 16px;
+    width: 16px;
+    left: 2px;
+    bottom: 2px;
+    background-color: white;
+    transition: .4s;
+    border-radius: 50%;
+}
+
+input:checked+.tmb-slider {
+    background-color: #2196F3;
+}
+
+input:focus+.tmb-slider {
+    box-shadow: 0 0 1px #2196F3;
+}
+
+input:checked+.tmb-slider:before {
+    transform: translateX(20px);
+}
+
+/* Dark mode support for toggle */
+body.dark-mode .tmb-slider {
+    background-color: #555;
+}
+
+body.dark-mode input:checked+.tmb-slider {
+    background-color: #4CAF50;
+    /* Green for active/on in dark mode */
+}
+
+/* Toggle Container in Toolbar */
+.mode-toggle-container {
+    display: flex;
+    align-items: center;
+    background-color: var(--toolbar-bg);
+    border: 1px solid var(--border-color);
+    padding: 2px 8px;
+    border-radius: 4px;
+    height: 30px;
+    /* Match button height roughly */
+    box-sizing: border-box;
+}
+
+.mode-label {
+    font-size: 14px;
+    margin-left: 5px;
+    user-select: none;
+    min-width: 65px;
+    /* Prevent jitter when text changes */
+    text-align: center;
+}
+
+/* ToastUI Toolbar Dark Mode */
+body.dark-mode .toastui-editor-defaultUI-toolbar {
+    background-color: var(--toolbar-bg) !important;
+    border-bottom: 1px solid var(--border-color) !important;
+    flex-wrap: wrap;
+    /* Allow wrapping for small screens */
+    height: auto !important;
+    /* Allow height to grow */
+}
+
+/* Also apply to default (light) mode toolbar if needed, though dark mode override is what's used. 
+   We should target the class generally too. */
+.toastui-editor-defaultUI-toolbar {
+    flex-wrap: wrap;
+    height: auto !important;
+}
+
+body.dark-mode .toastui-editor-toolbar-icons {
+    color: var(--text-color) !important;
+    border-color: transparent !important;
+}
+
+body.dark-mode .toastui-editor-toolbar-icons:hover {
+    background-color: var(--menu-hover) !important;
+    border-color: var(--border-color) !important;
+}
+
+/* Ensure icons (which might be SVGs or background images) are visible */
+/* ToastUI often uses background images for icons, so we might need filter inversion or specific styling */
+/* Assuming standard ToastUI usage, we might need to invert colors if they are black icons */
+body.dark-mode .toastui-editor-toolbar-icons {
+    filter: invert(1);
+}
+
+/* Fix for the scroll/mode switch bottom bar specific to ToastUI */
+body.dark-mode .toastui-editor-mode-switch {
+    background-color: var(--toolbar-bg) !important;
+    border-top: 1px solid var(--border-color) !important;
+}
+
+body.dark-mode .toastui-editor-mode-switch .tab-item {
+    color: var(--text-color) !important;
+}
+
+body.dark-mode .toastui-editor-mode-switch .tab-item.active {
+    background-color: var(--bg-color) !important;
+}
+
+/* Dropdown Menu */
+.dropdown {
+    position: relative;
+    display: inline-block;
+}
+
+.dropbtn {
+    padding: 5px 10px;
+    font-size: 16px;
+    border: none;
+    cursor: pointer;
+    background-color: transparent;
+    color: var(--text-color);
+}
+
+.dropdown-content {
+    display: none;
+    position: absolute;
+    background-color: var(--menu-bg);
+    min-width: 160px;
+    box-shadow: 0px 8px 16px 0px rgba(0, 0, 0, 0.2);
+    z-index: 1000;
+    /* High z-index */
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+}
+
+.dropdown-content a {
+    color: var(--text-color);
+    padding: 12px 16px;
+    text-decoration: none;
+    display: block;
+}
+
+.dropdown-content a:hover {
+    background-color: var(--menu-hover);
+}
+
+.show {
+    display: block;
+}
+
+/* Cheatsheet Styles */
+.cheatsheet-content {
+    min-width: 200px;
+    padding: 10px;
+}
+
+.cs-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 5px 0;
+    border-bottom: 1px solid var(--border-color);
+    font-size: 14px;
+    color: var(--text-color);
+}
+
+.cs-item:last-child {
+    border-bottom: none;
+}
+
+.cs-item code {
+    background: rgba(128, 128, 128, 0.2);
+    padding: 2px 5px;
+    border-radius: 3px;
+    font-family: monospace;
+}
+
+/* ToastUI Dark Mode Fixes */
+
+body.dark-mode .toastui-editor-tabs,
+body.dark-mode .toastui-editor-md-tab-container,
+body.dark-mode .toastui-editor-ww-tab-container {
+    background-color: var(--toolbar-bg) !important;
+    border-bottom-color: var(--border-color) !important;
+}
+
+/* Ensure the main container doesn't have a white background */
+body.dark-mode .toastui-editor-defaultUI {
+    background-color: var(--bg-color) !important;
+}
+
+body.dark-mode .toastui-editor-tabs .tab-item {
+    color: var(--text-color) !important;
+    background-color: transparent !important;
+    border-color: var(--border-color) !important;
+}
+
+body.dark-mode .toastui-editor-tabs .tab-item.active {
+    background-color: var(--editor-bg) !important;
+    color: var(--text-color) !important;
+    border-bottom-color: var(--editor-bg) !important;
+}
+
+/* Table Text Visibility in Dark Mode (CodeMirror/Editor Area) */
+/* This targets the table formatting in the Markdown Source view */
+body.dark-mode .cm-s-default .cm-variable-2,
+/* Often used for table pipes */
+body.dark-mode .cm-s-default .cm-variable-3,
+body.dark-mode .cm-s-default .cm-keyword {
+    color: #e0e0e0 !important;
+    /* Ensure table structure is visible */
+}
+
+/* Table content usually falls under generic text or specific span classes depending on content */
+/* Force common table-related tokens to be visible */
+body.dark-mode .cm-s-default .cm-string,
+body.dark-mode .cm-s-default .cm-number,
+body.dark-mode .cm-s-default .cm-atom {
+    color: #e0e0e0 !important;
+}
+
+/* General text fallback for table cells */
+body.dark-mode .CodeMirror-line {
+    color: var(--editor-text) !important;
+}
+
+/* Ensure table text in CodeMirror (Source Mode) is visible */
+body.dark-mode .cm-s-default .cm-table-row,
+body.dark-mode .cm-s-default .cm-table-cell {
+    color: var(--editor-text) !important;
+}
+
+/* Force light color on any span in CodeMirror that might be inheriting black */
+body.dark-mode .CodeMirror-line>span {
+    color: inherit;
+}
+
+/* But allow specific syntax highlighting classes to override if they have !important or higher specificity.
+   However, CodeMirror usually puts classes on spans.
+   Let's try to be specific for GFM tables if they use specific classes. 
+   Usually simply enforcing .CodeMirror color handles it, but maybe some other CSS is interfering.
+*/
+
+/* Preview Mode Table Fixes - Broad Selectors */
+body.dark-mode table,
+body.dark-mode .toastui-editor-contents table,
+body.dark-mode .tui-editor-contents table {
+    color: var(--text-color) !important;
+    border-color: var(--border-color) !important;
+}
+
+body.dark-mode th,
+body.dark-mode td,
+body.dark-mode .toastui-editor-contents th,
+body.dark-mode .toastui-editor-contents td,
+body.dark-mode .tui-editor-contents th,
+body.dark-mode .tui-editor-contents td {
+    color: var(--text-color) !important;
+    border-color: var(--border-color) !important;
+}
+
+/* Specific fix for the class found by user */
+body.dark-mode .toastui-editor-md-table-cell {
+    color: var(--text-color) !important;
+}
+
+/* Blockquote Fixes */
+/* Editor (Source) Mode - targeted based on user inspection */
+body.dark-mode .toastui-editor-md-marked-text,
+body.dark-mode .toastui-editor-md-block-quote,
+body.dark-mode .cm-quote {
+    color: var(--text-color) !important;
+    background-color: transparent !important;
+    /* Ensure no weird background */
+}
+
+/* Preview Mode */
+body.dark-mode blockquote,
+body.dark-mode blockquote p {
+    color: var(--text-color) !important;
+}
+
+/* Restore Code Highlighting being overridden by marked-text rule */
+body.dark-mode .toastui-editor-md-code,
+body.dark-mode .toastui-editor-md-code .toastui-editor-md-marked-text {
+    color: #ff9e9e !important;
+    background-color: #444 !important;
+}
+
+/* Force everything inside a table in dark mode to be light text */
+body.dark-mode table * {
+    color: var(--text-color) !important;
+}
+
+body.dark-mode .toastui-editor-contents th {
+    background-color: #333 !important;
+    /* Distinct header */
+}
