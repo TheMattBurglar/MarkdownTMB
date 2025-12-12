@@ -28,7 +28,7 @@ body {
     text-rendering: optimizeLegibility;
     /* Force hardware acceleration to prevent jitter/popping */
     transform: translateZ(0);
-    --editor-font-size: 16px;
+    --editor-font-size: 20px;
     background-color: var(--editor-bg);
 }
 

@@ -3,6 +3,23 @@ const Editor = toastui.Editor;
 // Initialize globals before editor/plugins
 window.dictionary = null;
 window.customDictionary = new Set();
+window.suggestionCache = new Map();
+window.spellWorker = new Worker('spell-worker.js');
+window.menuUpdateCallback = null;
+
+window.spellWorker.onmessage = function (e) {
+    const { type, payload } = e.data;
+    if (type === 'suggestions') {
+        const { word, suggestions, id } = payload;
+        window.suggestionCache.set(word, suggestions);
+
+        // If the context menu is waiting for this word, update it
+        if (window.menuUpdateCallback && window.menuUpdateCallback.word === word) {
+            window.menuUpdateCallback.fn(suggestions);
+            window.menuUpdateCallback = null;
+        }
+    }
+};
 
 // ProseMirror Spell Check Plugin
 function spellCheckPlugin(context) {
@@ -31,6 +48,9 @@ function spellCheckPlugin(context) {
 
             const decorations = [];
             try {
+                // Collect unique errors for pre-fetching
+                const uniqueErrors = new Set();
+
                 doc.descendants((node, pos) => {
                     if (node.isText) {
                         const text = node.text;
@@ -51,10 +71,29 @@ function spellCheckPlugin(context) {
                                 const from = pos + match.index;
                                 const to = from + rawWord.length;
                                 decorations.push(Decoration.inline(from, to, { class: 'spell-error' }));
+                                uniqueErrors.add(checkWord);
                             }
                         }
                     }
                 });
+
+                // Prefetch suggestions for found errors
+                if (uniqueErrors.size > 0 && window.spellWorker) {
+                    uniqueErrors.forEach(word => {
+                        if (!window.suggestionCache.has(word)) {
+                            // Send to worker. Worker can handle parallel requests.
+                            window.spellWorker.postMessage({
+                                type: 'suggest',
+                                payload: { word: word, id: Date.now() }
+                            });
+                            // Mark as pending in cache to avoid spamming worker? 
+                            // Or just rely on worker processing speed.
+                            // Ideally set a placeholder to avoid duplicate requests.
+                            window.suggestionCache.set(word, null); // Pending
+                        }
+                    });
+                }
+
                 return DecorationSet.create(doc, decorations);
             } catch (err) {
                 console.error("Error generating decorations:", err);
@@ -116,6 +155,15 @@ async function loadDictionary() {
         const affData = await fetch('libs/en_US.aff').then(r => r.text());
         const dicData = await fetch('libs/en_US.dic').then(r => r.text());
         window.dictionary = new Typo("en_US", affData, dicData);
+
+        // Initialize worker dictionary
+        if (window.spellWorker) {
+            window.spellWorker.postMessage({
+                type: 'init',
+                payload: { affData, dicData }
+            });
+        }
+
         spellStatus.textContent = "Spell check ready";
 
         console.log("Dictionary loaded, spell check active.");
@@ -148,7 +196,7 @@ function highlightErrors(typos) {
 
 // Mode Toggle
 // Zoom Logic
-let currentZoom = 16;
+let currentZoom = 20;
 const editorEl = document.getElementById('editor');
 
 // Default Dark Mode
@@ -353,6 +401,7 @@ document.getElementById('menu-open').addEventListener('click', (e) => {
 document.addEventListener('keydown', function (e) {
     if ((e.ctrlKey || e.metaKey) && e.key === 's') {
         e.preventDefault();
+        e.stopPropagation();
         saveDocument();
     }
     if ((e.ctrlKey || e.metaKey) && e.key === 'o') {
@@ -368,7 +417,7 @@ document.addEventListener('keydown', function (e) {
         e.preventDefault();
         if (currentZoom > 8) setZoom(currentZoom - 2);
     }
-});
+}, { capture: true });
 
 // Context Menu Logic
 document.addEventListener('contextmenu', function (e) {
@@ -448,68 +497,89 @@ document.addEventListener('contextmenu', function (e) {
         menu.style.left = `${left}px`;
         menu.style.visibility = 'visible';
 
+        // Update logic for suggestions rendering
+        const renderSuggestions = (suggestions) => {
+            menu.innerHTML = '';
+            if (suggestions && suggestions.length > 0) {
+                suggestions.forEach(suggestion => {
+                    const item = document.createElement('div');
+                    item.className = 'context-menu-item';
+                    item.textContent = suggestion;
+                    item.onclick = () => {
+                        const newRange = document.createRange();
+                        newRange.setStart(node, start);
+                        newRange.setEnd(node, end);
+
+                        const selection = window.getSelection();
+                        selection.removeAllRanges();
+                        selection.addRange(newRange);
+
+                        document.execCommand('insertText', false, suggestion);
+                        menu.remove();
+                    };
+                    menu.appendChild(item);
+                });
+            } else {
+                const item = document.createElement('div');
+                item.className = 'context-menu-header';
+                item.textContent = 'No suggestions';
+                menu.appendChild(item);
+            }
+
+            const separator = document.createElement('div');
+            separator.className = 'context-menu-separator';
+            menu.appendChild(separator);
+
+            const ignoreItem = document.createElement('div');
+            ignoreItem.className = 'context-menu-item';
+            ignoreItem.textContent = 'Add to Dictionary';
+            ignoreItem.onclick = () => {
+                window.customDictionary.add(checkWord);
+                menu.remove();
+                if (window.spellCheckKey) {
+                    const tr = editor.getEditorElements().mdEditor.view.state.tr;
+                    tr.setMeta(window.spellCheckKey, true);
+                    editor.getEditorElements().mdEditor.view.dispatch(tr);
+                }
+            };
+            menu.appendChild(ignoreItem);
+        };
+
         // Close menu on click elsewhere
         const closeMenu = () => {
             menu.remove();
             document.removeEventListener('click', closeMenu);
+            // Clear pending callback if any
+            if (window.menuUpdateCallback && window.menuUpdateCallback.word === checkWord) {
+                window.menuUpdateCallback = null;
+            }
         };
         // Delay adding click listener slightly to avoid immediate close
         setTimeout(() => document.addEventListener('click', closeMenu), 50);
 
-        // 2. Async calculation of suggestions
-        requestAnimationFrame(() => {
-            // Use setTimeout to yield to render
-            setTimeout(() => {
-                const suggestions = window.dictionary.suggest(checkWord, 3); // Limit to 3 for speed
+        // Check cache
+        const cached = window.suggestionCache.get(checkWord);
+        if (cached && Array.isArray(cached)) {
+            // Already computed
+            renderSuggestions(cached);
+        } else {
+            // Not computed or pending
+            // Register callback for when it arrives
+            window.menuUpdateCallback = {
+                word: checkWord,
+                fn: renderSuggestions
+            };
 
-                // Clear "Loading..."
-                menu.innerHTML = '';
-
-                if (suggestions.length > 0) {
-                    suggestions.forEach(suggestion => {
-                        const item = document.createElement('div');
-                        item.className = 'context-menu-item';
-                        item.textContent = suggestion;
-                        item.onclick = () => {
-                            const newRange = document.createRange();
-                            newRange.setStart(node, start);
-                            newRange.setEnd(node, end);
-
-                            const selection = window.getSelection();
-                            selection.removeAllRanges();
-                            selection.addRange(newRange);
-
-                            document.execCommand('insertText', false, suggestion);
-                            menu.remove();
-                        };
-                        menu.appendChild(item);
-                    });
-                } else {
-                    const item = document.createElement('div');
-                    item.className = 'context-menu-header';
-                    item.textContent = 'No suggestions';
-                    menu.appendChild(item);
-                }
-
-                const separator = document.createElement('div');
-                separator.className = 'context-menu-separator';
-                menu.appendChild(separator);
-
-                const ignoreItem = document.createElement('div');
-                ignoreItem.className = 'context-menu-item';
-                ignoreItem.textContent = 'Add to Dictionary';
-                ignoreItem.onclick = () => {
-                    window.customDictionary.add(checkWord);
-                    menu.remove();
-                    if (window.spellCheckKey) {
-                        const tr = editor.getEditorElements().mdEditor.view.state.tr;
-                        tr.setMeta(window.spellCheckKey, true);
-                        editor.getEditorElements().mdEditor.view.dispatch(tr);
-                    }
-                };
-                menu.appendChild(ignoreItem);
-            }, 0);
-        });
+            // If strictly null (pending), it is already being fetched.
+            // If undefined (not in map), request it.
+            if (cached === undefined) {
+                window.spellWorker.postMessage({
+                    type: 'suggest',
+                    payload: { word: checkWord, id: Date.now() }
+                });
+                window.suggestionCache.set(checkWord, null); // Mark pending
+            }
+        }
     }
 });
 
